@@ -20736,8 +20736,22 @@ def ensure_wrapper_created() -> None:
       // Fallback for when not running in pywebview
       btn.disabled = false;
       btn.textContent = 'Check Now';
-      status.textContent = 'Update checking not available in this environment';
-      status.style.color = 'var(--text-secondary)';
+
+      // Show detailed debug info instead of generic message
+      const debugInfo = {
+        window_pywebview: !!window.pywebview,
+        window_pywebview_api: !!(window.pywebview && window.pywebview.api),
+        window_check_for_updates: !!window.check_for_updates,
+        window_download_update: !!window.download_update,
+        window_reveal_in_finder: !!window.reveal_in_finder
+      };
+
+      status.textContent = `API Debug: ${JSON.stringify(debugInfo, null, 0)}`;
+      status.style.color = '#dc3545';
+      status.style.fontSize = '11px';
+      status.style.wordBreak = 'break-all';
+
+      console.log('PyWebView API Debug:', debugInfo);
     }
   }
 
