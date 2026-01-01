@@ -22,7 +22,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
-        brew install jq
+        brew install jq gh
 
     - name: Build app with PyInstaller
       run: |
@@ -67,11 +67,11 @@ jobs:
         cat manifest.json
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          Akson-${{ github.ref_name }}.dmg
-          manifest.json
-        generate_release_notes: true
+      run: |
+        # Create release using GitHub CLI
+        gh release create ${{ github.ref_name }} \
+          --title "Akson ${{ github.ref_name }}" \
+          --notes "Automated release of Akson ${{ github.ref_name }}" \
+          Akson-${{ github.ref_name }}.dmg manifest.json
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
