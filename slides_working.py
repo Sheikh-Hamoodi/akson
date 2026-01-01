@@ -10845,6 +10845,10 @@ def ensure_wrapper_created() -> None:
           <span class="settingsNavIcon"></span>
           <span>PDF Viewer</span>
         </div>
+        <div class="settingsNavItem" data-section="about">
+          <span class="settingsNavIcon"></span>
+          <span>About</span>
+        </div>
       </div>
       
       <div id="settingsMain">
@@ -11091,6 +11095,48 @@ def ensure_wrapper_created() -> None:
                     <option value="150">150%</option>
                     <option value="200">200%</option>
                   </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- About Section -->
+          <div class="settingsPage" id="pageAbout" style="display: none;">
+            <div class="settingsGroup">
+              <div style="text-align: center; padding: 20px;">
+                <img src="icons/akson.png" alt="Akson" style="width: 64px; height: 64px; margin-bottom: 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px;">Akson</h2>
+                <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 14px;">AI-Powered Study Companion</p>
+                <div style="background: var(--bg-secondary); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                  <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Version</div>
+                  <div style="color: var(--text-secondary);" id="appVersionAbout">Loading...</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settingsGroup">
+              <div class="settingsRow">
+                <div class="settingsLabel">
+                  <label>Check for Updates</label>
+                  <div class="settingsDescription">Check if a newer version is available</div>
+                </div>
+                <div class="settingsControl">
+                  <button id="checkUpdatesBtnAbout" class="macBtn" style="width: 120px;">Check Now</button>
+                </div>
+              </div>
+              <div id="updateStatusAbout" style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);"></div>
+            </div>
+
+            <div class="settingsGroup">
+              <div class="settingsRow">
+                <div class="settingsLabel">
+                  <label>System Information</label>
+                </div>
+                <div class="settingsControl">
+                  <div style="font-size: 12px; color: var(--text-secondary);">
+                    <div>Platform: <span id="systemPlatformAbout">Loading...</span></div>
+                    <div>Architecture: <span id="systemArchAbout">Loading...</span></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -20606,7 +20652,95 @@ def ensure_wrapper_created() -> None:
     const modal = document.getElementById('settingsModal');
     modal.classList.remove('show');
   }
-  
+
+  // About tab functions
+  function updateAboutInfo() {
+    // Set version info
+    const versionElement = document.getElementById('appVersionAbout');
+    if (versionElement) {
+      versionElement.textContent = '1.0.5'; // Will be updated by Python backend
+    }
+
+    // Set system info
+    const platformElement = document.getElementById('systemPlatformAbout');
+    const archElement = document.getElementById('systemArchAbout');
+
+    if (platformElement) {
+      platformElement.textContent = navigator.platform.includes('Mac') ? 'macOS' :
+                                  navigator.platform.includes('Win') ? 'Windows' : 'Linux';
+    }
+
+    if (archElement) {
+      archElement.textContent = navigator.userAgent.includes('arm64') ||
+                              navigator.userAgent.includes('ARM') ? 'ARM64' : 'x64';
+    }
+  }
+
+  function handleCheckUpdatesAbout() {
+    const btn = document.getElementById('checkUpdatesBtnAbout');
+    const status = document.getElementById('updateStatusAbout');
+
+    if (!btn || !status) return;
+
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    status.textContent = 'Checking for updates...';
+    status.style.color = 'var(--text-secondary)';
+
+    // Check for updates via Python backend
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.check_for_updates) {
+      window.pywebview.api.check_for_updates().then(result => {
+        // Re-enable button
+        btn.disabled = false;
+        btn.textContent = 'Check Now';
+
+        if (result && result.ok) {
+          if (result.needsUpdate) {
+            status.textContent = `Update available: v${result.latest}`;
+            status.style.color = '#28a745';
+
+            // Show download prompt
+            setTimeout(() => {
+              if (confirm(`Update available: v${result.latest}\n\n${result.notes}\n\nDownload now?`)) {
+                if (window.pywebview && window.pywebview.api && window.pywebview.api.download_update) {
+                  status.textContent = 'Downloading update...';
+                  window.pywebview.api.download_update(result.downloadUrl).then(downloadResult => {
+                    if (downloadResult && downloadResult.ok) {
+                      status.textContent = 'Update downloaded! Check your Downloads folder.';
+                      // Reveal in Finder
+                      window.pywebview.api.reveal_in_finder(downloadResult.path);
+                    } else {
+                      status.textContent = 'Download failed: ' + (downloadResult.error || 'Unknown error');
+                      status.style.color = '#dc3545';
+                    }
+                  });
+                }
+              }
+            }, 500);
+          } else {
+            status.textContent = 'You have the latest version!';
+            status.style.color = '#28a745';
+          }
+        } else {
+          status.textContent = 'Failed to check updates: ' + (result.error || 'Network error');
+          status.style.color = '#dc3545';
+        }
+      }).catch(error => {
+        btn.disabled = false;
+        btn.textContent = 'Check Now';
+        status.textContent = 'Error checking updates: ' + error.message;
+        status.style.color = '#dc3545';
+      });
+    } else {
+      // Fallback for when not running in pywebview
+      btn.disabled = false;
+      btn.textContent = 'Check Now';
+      status.textContent = 'Update checking not available in this environment';
+      status.style.color = 'var(--text-secondary)';
+    }
+  }
+
   function saveSettings() {
     // Get all settings (automatically saved on change in macOS style)
     const newSpeed = document.getElementById('animationSpeedInput').value;
@@ -21901,7 +22035,8 @@ def ensure_wrapper_created() -> None:
     const titles = {
       general: 'General',
       appearance: 'Appearance',
-      pdf: 'PDF Viewer'
+      pdf: 'PDF Viewer',
+      about: 'About'
     };
     document.getElementById('settingsTitle').textContent = titles[section] || 'Settings';
     
@@ -21909,7 +22044,8 @@ def ensure_wrapper_created() -> None:
     const pageMap = {
       general: 'pageGeneral',
       appearance: 'pageAppearance',
-      pdf: 'pagePDF'
+      pdf: 'pagePDF',
+      about: 'pageAbout'
     };
     document.getElementById(pageMap[section]).style.display = 'block';
   }
@@ -21921,7 +22057,11 @@ def ensure_wrapper_created() -> None:
   document.querySelectorAll('.settingsNavItem').forEach(item => {
     item.onclick = () => switchSettingsSection(item.dataset.section);
   });
-  
+
+  // About tab functionality
+  document.getElementById('checkUpdatesBtnAbout').onclick = handleCheckUpdatesAbout;
+  updateAboutInfo();
+
   // Auto-save on change (macOS style)
   document.getElementById('animationSpeedInput').addEventListener('change', saveSettings);
   document.getElementById('defaultSidebarStateInput').addEventListener('change', saveSettings);
