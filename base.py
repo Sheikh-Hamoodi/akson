@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import QLineEdit
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QHBoxLayout
-from PyQt6.QtGui import QKeySequence, QAction, QIcon
+from PyQt6.QtGui import QKeySequence, QAction, QIcon, QPixmap
 from PyQt6.QtCore import QStandardPaths
 import sys
 import platform
@@ -39,6 +39,7 @@ import genanki
 from PyQt6.QtPrintSupport import QPrinter
 from PyQt6 import QtGui as _QtGui  # already imported QtGui above, this is just to reference QTextDocument
 from typing import Optional
+import threading
 
 # Slides import deps
 try:
@@ -916,6 +917,156 @@ class ImportFilesDialog(QtWidgets.QDialog):
         )
 
     
+class UpdateToast(QtWidgets.QWidget):
+    """Toast notification for update availability."""
+
+    def __init__(self, parent=None, version="1.0.0", notes="", download_url=""):
+        super().__init__(parent)
+        self.version = version
+        self.notes = notes
+        self.download_url = download_url
+        self.parent_window = parent
+
+        self.setWindowFlags(
+            QtCore.Qt.WindowType.FramelessWindowHint |
+            QtCore.Qt.WindowType.WindowStaysOnTopHint |
+            QtCore.Qt.WindowType.Tool
+        )
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        self.setup_ui()
+        self.setup_animations()
+
+    def setup_ui(self):
+        # Match parent's theme
+        is_dark = getattr(self.parent_window, '_system_theme', 'dark') == 'dark'
+
+        # Theme-aware colors
+        if is_dark:
+            bg_color = "#2a2a2a"
+            text_color = "#ffffff"
+            accent_color = "#007aff"
+            border_color = "#404040"
+            button_bg = "#3a3a3a"
+        else:
+            bg_color = "#ffffff"
+            text_color = "#000000"
+            accent_color = "#007aff"
+            border_color = "#e0e0e0"
+            button_bg = "#f0f0f0"
+
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {bg_color};
+                color: {text_color};
+                border: 1px solid {border_color};
+                border-radius: 8px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }}
+            QPushButton {{
+                background-color: {button_bg};
+                border: 1px solid {border_color};
+                border-radius: 4px;
+                padding: 4px 8px;
+                color: {text_color};
+            }}
+            QPushButton:hover {{
+                background-color: {accent_color};
+                color: white;
+            }}
+        """)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(12)
+
+        # Akson logo
+        logo_label = QtWidgets.QLabel()
+        pixmap = QPixmap('icons/akson.png').scaled(32, 32, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                                                  QtCore.Qt.TransformationMode.SmoothTransformation)
+        logo_label.setPixmap(pixmap)
+        layout.addWidget(logo_label)
+
+        # Text content
+        content_layout = QtWidgets.QVBoxLayout()
+        content_layout.setSpacing(4)
+
+        title_label = QtWidgets.QLabel(f"Update Available (v{self.version})")
+        title_label.setStyleSheet("font-weight: bold; font-size: 13px;")
+
+        notes_label = QtWidgets.QLabel(self.notes[:100] + "..." if len(self.notes) > 100 else self.notes)
+        notes_label.setWordWrap(True)
+        notes_label.setStyleSheet("font-size: 11px; opacity: 0.8;")
+
+        content_layout.addWidget(title_label)
+        content_layout.addWidget(notes_label)
+        layout.addLayout(content_layout, 1)
+
+        # Buttons
+        button_layout = QtWidgets.QVBoxLayout()
+        button_layout.setSpacing(6)
+
+        update_btn = QtWidgets.QPushButton("Update")
+        update_btn.setFixedSize(70, 24)
+        update_btn.clicked.connect(self.start_update)
+
+        later_btn = QtWidgets.QPushButton("Later")
+        later_btn.setFixedSize(70, 24)
+        later_btn.clicked.connect(self.hide)
+
+        button_layout.addWidget(update_btn)
+        button_layout.addWidget(later_btn)
+        layout.addLayout(button_layout)
+
+        self.setFixedWidth(350)
+        self.adjustSize()
+
+    def setup_animations(self):
+        self.fade_in = QtCore.QPropertyAnimation(self, b"windowOpacity")
+        self.fade_in.setDuration(300)
+        self.fade_in.setStartValue(0.0)
+        self.fade_in.setEndValue(1.0)
+
+        self.fade_out = QtCore.QPropertyAnimation(self, b"windowOpacity")
+        self.fade_out.setDuration(300)
+        self.fade_out.setStartValue(1.0)
+        self.fade_out.setEndValue(0.0)
+        self.fade_out.finished.connect(self.close)
+
+    def show_toast(self):
+        """Show the toast notification with animation."""
+        # Position in top-right corner of parent window
+        if self.parent_window:
+            parent_pos = self.parent_window.pos()
+            parent_size = self.parent_window.size()
+            self.move(parent_pos.x() + parent_size.width() - self.width() - 10,
+                     parent_pos.y() + 50)
+
+        self.fade_in.start()
+        self.show()
+
+    def hide_toast(self):
+        """Hide the toast with animation."""
+        self.fade_out.start()
+
+    def start_update(self):
+        """Start the update process."""
+        if self.parent_window and hasattr(self.parent_window, 'slides_worker'):
+            # Use the existing update method
+            threading.Thread(target=self._download_update, daemon=True).start()
+        self.hide_toast()
+
+    def _download_update(self):
+        """Download the update in background."""
+        try:
+            result = self.parent_window.slides_worker.download_update(self.download_url)
+            if result.get('ok'):
+                # Reveal in Finder
+                self.parent_window.slides_worker.reveal_in_finder(result['path'])
+        except Exception as e:
+            print(f"Update download failed: {e}")
+
+
 class MyWindow(QMainWindow):
 
     def __init__(self, user_data):
@@ -933,6 +1084,10 @@ class MyWindow(QMainWindow):
         # Session storage for slides viewer
         self.saved_lectures = {}  # {lecture_name: {summaries: [], flashcards: [], created: timestamp}}
         self.load_saved_lectures()
+
+        # Update checking
+        self.update_toast = None
+        self.check_for_updates()
 
         # Window settings
         self.setGeometry(100, 100, 325, 600)  # Width = 325 (narrow), Height = 600
@@ -2924,6 +3079,37 @@ r            QListWidget::item:selected {
         minimize_action.triggered.connect(self.showMinimized)
         self.addAction(minimize_action)
     
+    def check_for_updates(self):
+        """Check for app updates in background."""
+        def _check():
+            try:
+                if hasattr(self, 'slides_worker') and self.slides_worker:
+                    result = self.slides_worker.check_for_update()
+                    if result.get('ok') and result.get('needsUpdate'):
+                        # Show update notification
+                        QtCore.QMetaObject.invokeMethod(
+                            self, "show_update_notification",
+                            QtCore.Qt.ConnectionType.QueuedConnection,
+                            QtCore.Q_ARG(dict, result)
+                        )
+            except Exception as e:
+                print(f"Update check failed: {e}")
+
+        threading.Thread(target=_check, daemon=True).start()
+
+    def show_update_notification(self, update_info):
+        """Show update toast notification."""
+        if self.update_toast:
+            self.update_toast.close()
+
+        self.update_toast = UpdateToast(
+            parent=self,
+            version=update_info.get('latest', '1.0.0'),
+            notes=update_info.get('notes', 'New version available'),
+            download_url=update_info.get('downloadUrl', '')
+        )
+        self.update_toast.show_toast()
+
     def _setup_macos_theme_detection(self):
         """Detect macOS system theme and sync with webview."""
         if sys.platform != "darwin":
