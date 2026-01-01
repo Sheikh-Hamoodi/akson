@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('web', 'web'), ('pdfjs', 'web_pdfjs'), ('icons', 'icons'), ('library_topics.json', '.'), ('saved_lectures.json', '.'), ('base.py', '.')]
+datas = [('web', 'web'), ('pdfjs', 'web_pdfjs'), ('icons', 'icons'), ('base.py', '.')]
 binaries = []
 hiddenimports = ['aiohttp', 'jinja2', 'pkg_resources.py2_warn', 'pynput', 'pynput.keyboard', 'PyQt6', 'PyQt6.QtWidgets', 'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWebEngineWidgets', 'PyQt6.QtPrintSupport', 'mss', 'cv2', 'pytesseract', 'PIL', 'PIL.Image', 'genanki', 'openai', 'numpy', 'requests']
 datas += collect_data_files('akson_cards')
@@ -45,7 +45,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['/Users/ahmedhassan/Documents/Akson/packaging/icons/Akson.icns'],
+    icon=None,
 )
 coll = COLLECT(
     exe,
@@ -59,6 +59,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='Akson.app',
-    icon='/Users/ahmedhassan/Documents/Akson/packaging/icons/Akson.icns',
+    icon=None,
     bundle_identifier='ai.akson.viewer',
 )
