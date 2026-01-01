@@ -1,7 +1,7 @@
 {
-  "version": "1.0.5",
-  "notes": "Test version for update notifications - includes About section and improved UI",
-  "url": "https://github.com/Sheikh-Hamoodi/akson/releases/download/v1.0.5/Akson-1.0.5.dmg",
+  "version": "1.0.6",
+  "notes": "Added About section to settings with version info, update checking, and system information - includes Akson logo and theme integration",
+  "url": "https://github.com/Sheikh-Hamoodi/akson/releases/download/v1.0.6/Akson-1.0.6.dmg",
   "sha256": "",
   "min_version": "1.0.0"
 }
