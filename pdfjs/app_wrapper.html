@@ -1139,7 +1139,7 @@
                     <button class="settings-tab active" data-tab="general">General</button>
                     <button class="settings-tab" data-tab="appearance">Appearance</button>
                     <button class="settings-tab" data-tab="pdf-viewer">PDF Viewer</button>
-                    <button class="settings-tab" data-tab="about">About</button>
+                    <button class="settings-tab" data-tab="about" style="background: #ff6b6b; color: white;">About</button>
                 </div>
                 
                 <div class="settings-content">
@@ -2301,12 +2301,14 @@
         }
         
         function switchSettingsTab(tabName) {
+            console.log('🔄 Switching to tab:', tabName);
             document.querySelectorAll('.settings-tab').forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.tab === tabName);
             });
             document.querySelectorAll('.settings-panel').forEach(panel => {
                 panel.classList.toggle('active', panel.dataset.panel === tabName);
             });
+            console.log('✅ Tab switch completed for:', tabName);
         }
         
         function handleThemeModeChange(e) {
@@ -2363,10 +2365,14 @@
 
         // About tab functions
         function updateAboutInfo() {
+            console.log('🎯 About tab initializing...');
             // Set version info
             const versionElement = document.getElementById('appVersion');
             if (versionElement) {
                 versionElement.textContent = '1.0.4'; // Will be updated by Python backend
+                console.log('✅ Version set to 1.0.4');
+            } else {
+                console.log('❌ Version element not found');
             }
 
             // Set system info
