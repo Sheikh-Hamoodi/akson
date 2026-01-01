@@ -45,7 +45,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon='icons/akson.png',
 )
 coll = COLLECT(
     exe,
@@ -59,6 +59,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='Akson.app',
-    icon=None,
+    icon='icons/akson.png',
     bundle_identifier='ai.akson.viewer',
 )

@@ -29,7 +29,18 @@ jobs:
 
     - name: Build app with PyInstaller
       run: |
+        export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
         pyinstaller Akson.spec
+
+    - name: Sign and notarize app
+      run: |
+        # Sign the app bundle with ad-hoc signing (allows Gatekeeper bypass)
+        codesign --force --deep --sign - dist/Akson.app
+
+        # Create DMG with signed app
+        brew install create-dmg
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     - name: Create DMG
       run: |
