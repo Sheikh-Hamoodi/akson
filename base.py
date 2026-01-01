@@ -3034,7 +3034,12 @@ r            QListWidget::item:selected {
         
         # View Menu
         view_menu = menubar.addMenu("View")
-        
+
+        # Check for Updates
+        update_action = QAction("Check for Updates", self)
+        update_action.triggered.connect(self.check_for_updates)
+        view_menu.addAction(update_action)
+
         # Window Menu
         window_menu = menubar.addMenu("Window")
         
